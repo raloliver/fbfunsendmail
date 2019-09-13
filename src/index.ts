@@ -8,6 +8,7 @@ const db = admin.firestore()
 import * as sgMail from '@sendgrid/mail';
 const API_KEY = functions.config().sendgrid.key;
 const TEMPLATE_ID = functions.config().sendgrid.template;
+sgMail.setApiKey(API_KEY);
 
 //send email to user after signup
 export const welcomeEmail = functions.auth.user().onCreate(
@@ -71,3 +72,22 @@ export const newOne = functions.firestore.document('posts/{postId}/comments/{com
         return sgMail.send(msg);
     }
 )
+
+//send a summary email for all users
+export const summary = functions.pubsub.schedule('every monday 4:00').onRun(async context => {
+    const userSnapshots = await admin.firestore().collection('users').get();
+
+    const emails = userSnapshots.docs.map(snap => snap.data().email);
+
+    const msg = {
+        to: emails,
+        from: 'amdeagencia@gmail.com',
+        templateId: TEMPLATE_ID,
+        dyamic_template_data: {
+            subject: `Resumo Semanal`,
+            text: `Não temos novos emails, mas você pode conferir esse link no celular.`
+        },
+    };
+
+    return sgMail.send(msg);
+})
